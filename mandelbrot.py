@@ -1,44 +1,29 @@
+import os
 from math import sqrt
-
-from random import shuffle
 import pygame
-from pygame.locals import *
 
-WINDOW_SIZE = 400
-COLOURFUL = False
-RANDOM = False
+
+def clear():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+pygame.init()
+
+clear()
+resolution = int(input('Resolution of image:\n'))
+clear()
+MAXIMUM_RECURSION = int(input('Maximum number of recursions:\n'))
+clear()
+input('Press enter to start.')
+clear()
+print('Progress: 0% [                    ]')
+
 K = 3
-X_INCREMENT = K/WINDOW_SIZE
-Y_INCREMENT = K/WINDOW_SIZE
-MAXIMUM_RECURSION = 40
+X_INCREMENT = K/resolution
+Y_INCREMENT = K/resolution
 
-colours = [(255, 0, 0),
-           (255, 64, 0),
-           (255, 128, 0),
-           (255, 191, 0),
-           (255, 255, 0),
-           (191, 255, 0),
-           (128, 255, 0),
-           (64, 255, 0),
-           (0, 255, 0),
-           (0, 255, 64),
-           (0, 255, 128),
-           (0, 255, 191),
-           (0, 255, 255),
-           (0, 191, 255),
-           (0, 128, 255),
-           (0, 64, 255),
-           (0, 0, 255),
-           (64, 0, 255),
-           (128, 0, 255),
-           (191, 0, 255),
-           (255, 0, 255),
-           (255, 0, 191),
-           (255, 0, 128),
-           (255, 0, 64),
-           (255, 0, 0)]
-if RANDOM:
-    shuffle(colours)
+main_surface = pygame.Surface((resolution, resolution))
+x = 0
+y = 0
 
 
 def recur_x(zx, zy, c):
@@ -66,38 +51,34 @@ def get_colour(recursions):
     colour = (recursions/MAXIMUM_RECURSION) * 255
     return colour, colour, colour
 
-main_surface = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
-
-x = 0
-y = 0
-
-update = True
 running = True
+count = 0
 while running:
-    if update:
 
-        x_coordinate = (X_INCREMENT * x) - ((K/2) + K/4)
-        y_coordinate = (Y_INCREMENT * y) - K/2
+    x_coordinate = (X_INCREMENT * x) - ((K/2) + K/4)
+    y_coordinate = (Y_INCREMENT * y) - K/2
 
-        recur = recur_times(x_coordinate, y_coordinate, MAXIMUM_RECURSION)
-        if COLOURFUL:
-            main_surface.set_at((x, y), colours[recur % 25])
-        else:
-            main_surface.set_at((x, y), get_colour(recur))
+    recur = recur_times(x_coordinate, y_coordinate, MAXIMUM_RECURSION)
+    main_surface.set_at((x, y), get_colour(recur))
 
-        if x + 1 > WINDOW_SIZE:
-            x = 0
-            y += 1
-        elif y == WINDOW_SIZE:
-            update = False
-        else:
-            x += 1
+    if x + 1 > resolution and not y + 1 > resolution:
+        x = 0
+        y += 1
+    elif x + 1 <= resolution:
+        x += 1
 
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            running = False
-        elif event.type == KEYDOWN:
-            if event.key == K_RETURN:
-                pygame.image.save(main_surface, 'mandelbrot.bmp')
+    count += 1
+    if count == 10000:
+        clear()
+        percentage = y/resolution
+        print('Progress: %s%% [%s]' % (round(percentage*100, 0), (int(percentage*20)*'#')+(int(20-percentage*20)*' ')))
+        count = 0
 
-    pygame.display.update()
+    if y == resolution:
+        running = False
+
+clear()
+print('Progress: 100% [####################]')
+pygame.image.save(main_surface, 'mandelbrot.bmp')
+print('Done!\nSaved as \'mandelbrot.bmp\'.')
+input()
