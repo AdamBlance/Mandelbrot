@@ -15,7 +15,7 @@ MAXIMUM_RECURSION = int(input('Maximum number of recursions:\n'))
 clear()
 input('Press enter to start.')
 clear()
-print('Progress: 0% [                    ]')
+print('Progress: 0.0% [                    ]')
 
 K = 3
 X_INCREMENT = K/resolution
@@ -68,7 +68,7 @@ while running:
         x += 1
 
     count += 1
-    if count == 10000:
+    if count == 50000:
         clear()
         percentage = y/resolution
         print('Progress: %s%% [%s]' % (round(percentage*100, 0), (int(percentage*20)*'#')+(int(20-percentage*20)*' ')))
@@ -78,7 +78,7 @@ while running:
         running = False
 
 clear()
-print('Progress: 100% [####################]')
+print('Progress: 100.0% [####################]')
 pygame.image.save(main_surface, 'mandelbrot.bmp')
 print('Done!\nSaved as \'mandelbrot.bmp\'.')
 input()
