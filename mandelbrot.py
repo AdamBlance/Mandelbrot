@@ -1,12 +1,10 @@
 import os
 from math import sqrt
-import pygame
+from PIL import Image
 
 
 def clear():
     os.system('cls' if os.name == 'nt' else 'clear')
-
-pygame.init()
 
 clear()
 resolution = int(input('Resolution of image:\n'))
@@ -15,15 +13,17 @@ MAXIMUM_RECURSION = int(input('Maximum number of recursions:\n'))
 clear()
 input('Press enter to start.')
 clear()
-print('Progress: 0.0% [                    ]')
+
+INVERT = False
 
 K = 3
 X_INCREMENT = K/resolution
 Y_INCREMENT = K/resolution
-
-main_surface = pygame.Surface((resolution, resolution))
 x = 0
 y = 0
+
+loaded_image = Image.new('RGB', (resolution, resolution), 'black')
+main_image = loaded_image.load()
 
 
 def recur_x(zx, zy, c):
@@ -48,7 +48,9 @@ def recur_times(cx, cy, limit):
 
 
 def get_colour(recursions):
-    colour = (recursions/MAXIMUM_RECURSION) * 255
+    colour = int((recursions/MAXIMUM_RECURSION) * 255)
+    if not INVERT:
+        colour = 255 - colour
     return colour, colour, colour
 
 running = True
@@ -59,26 +61,26 @@ while running:
     y_coordinate = (Y_INCREMENT * y) - K/2
 
     recur = recur_times(x_coordinate, y_coordinate, MAXIMUM_RECURSION)
-    main_surface.set_at((x, y), get_colour(recur))
+    main_image[x, y] = get_colour(recur)
 
-    if x + 1 > resolution and not y + 1 > resolution:
+    if x + 1 > resolution-1 and not y + 1 > resolution:
         x = 0
         y += 1
     elif x + 1 <= resolution:
         x += 1
 
     count += 1
-    if count == 50000:
+    if count == 32359:
         clear()
         percentage = y/resolution
-        print('Progress: %s%% [%s]' % (round(percentage*100, 0), (int(percentage*20)*'#')+(int(20-percentage*20)*' ')))
+        area = resolution**2
+        print('%i/%i lines complete.\n%i/%i pixels complete.' % (y, resolution, ((y-1)/resolution) * area + x, area))
         count = 0
 
     if y == resolution:
         running = False
 
 clear()
-print('Progress: 100.0% [####################]')
-pygame.image.save(main_surface, 'mandelbrot.bmp')
+loaded_image.save('mandelbrot.bmp')
 print('Done!\nSaved as \'mandelbrot.bmp\'.')
 input()
