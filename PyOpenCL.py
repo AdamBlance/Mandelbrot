@@ -1,8 +1,12 @@
 import pyopencl as cl
 import numpy as np
+from PIL import Image
+import pygame
 
 from os import environ
 environ['PYOPENCL_COMPILER_OUTPUT'] = '0'
+
+cl_context = cl.create_some_context(answers=[1, 0])
 
 
 def get_iterations(context, complex_array, iterations):
@@ -54,12 +58,27 @@ def calculate_mandelbrot(context, x_min, x_max, y_min, y_max, iterations, screen
     complex_array = real_array + imaginary_array[:, None]*1j
     complex_array = np.ravel(complex_array)
     colour_array = get_iterations(context, complex_array, iterations)
-    colour_array = (colour_array.reshape((screen_width, screen_height)) /
-                    float(colour_array.max()) * 255).astype(np.uint8)
+    colour_array = colour_array.reshape((screen_height, screen_width))
+    colour_array = (colour_array / float(colour_array.max()) * 255).astype(np.uint8)
     return colour_array
 
-cl_context = cl.create_some_context(answers=[1, 0])
-max_iterations = 1
+def draw_mandelbrot(surface, colour_array):
+    image_surface = pygame.Surface(colour_array.shape)
+    pygame.surfarray.blit_array(image_surface, np.array(colour_array).astype(int).T)
+    surface.blit(image_surface, (0, 0))
 
-print(calculate_mandelbrot(cl_context, -2, 2, -2, 2, max_iterations, 10, 10))
+width = 1000
+height = 1000
 
+x_min = -2
+x_max = 2
+
+y_min = x_min*(height/width)
+y_max = x_max*(height/width)
+
+pygame.init()
+colour_array = calculate_mandelbrot(cl_context, x_min, x_max, y_min, y_max, 20, width, height)
+main_surface = pygame.display.set_mode((width, height))
+draw_mandelbrot(main_surface, colour_array)
+pygame.display.update()
+input()
