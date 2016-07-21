@@ -1,5 +1,4 @@
 import os
-from math import sqrt
 from PIL import Image
 
 
@@ -16,11 +15,12 @@ clear()
 
 INVERT = False
 
-K = 3
+K = 4
 X_INCREMENT = K/resolution
 Y_INCREMENT = K/resolution
 x = 0
 y = 0
+
 
 loaded_image = Image.new('RGB', (resolution, resolution), 'black')
 main_image = loaded_image.load()
@@ -35,15 +35,15 @@ def recur_y(zx, zy, c):
 
 
 def recur_times(cx, cy, limit):
-    zx = 0
-    zy = 0
-    for i in range(0, limit + 1):
+    zx = cx
+    zy = cy
+    for i in range(limit+1):
+        if zx**2 + zy**2 > 4:
+            return i
         temp_x = recur_x(zx, zy, cx)
         temp_y = recur_y(zx, zy, cy)
         zx = temp_x
         zy = temp_y
-        if not 2 > sqrt(zx**2 + zy**2) > -1:
-            return i
     return limit
 
 
@@ -57,7 +57,7 @@ running = True
 count = 0
 while running:
 
-    x_coordinate = (X_INCREMENT * x) - ((K/2) + K/4)
+    x_coordinate = (X_INCREMENT * x) - K/2 - K/4
     y_coordinate = (Y_INCREMENT * y) - K/2
 
     recur = recur_times(x_coordinate, y_coordinate, MAXIMUM_RECURSION)
@@ -70,7 +70,7 @@ while running:
         x += 1
 
     count += 1
-    if count == 32359:
+    if count == 38529:
         clear()
         percentage = y/resolution
         area = resolution**2
@@ -83,4 +83,3 @@ while running:
 clear()
 loaded_image.save('mandelbrot.bmp')
 print('Done!\nSaved as \'mandelbrot.bmp\'.')
-input()
