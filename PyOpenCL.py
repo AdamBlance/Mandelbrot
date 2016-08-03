@@ -14,14 +14,14 @@ def get_iterations(context, complex_array, iterations):
 
     command_queue = cl.CommandQueue(context)
 
-    output_array = np.empty(complex_array.shape, np.ushort)
+    output_array = np.empty(complex_array.shape, np.uint8)
 
     flags = cl.mem_flags
     complex_array_buffer = cl.Buffer(context, flags.READ_ONLY | flags.COPY_HOST_PTR, hostbuf=complex_array)
     output_array_buffer = cl.Buffer(context, flags.WRITE_ONLY, output_array.nbytes)
 
     program = cl.Program(context, '''
-    __kernel void mandelbrot(__global float2 *complex_array, __global ushort *output_array, ushort const iterations)
+    __kernel void mandelbrot(__global double2 *complex_array, __global uchar *output_array, ushort const iterations)
     {
         int n = get_global_id(0);
 
@@ -30,21 +30,19 @@ def get_iterations(context, complex_array, iterations):
         float cx = complex_array[n].x;
         float cy = complex_array[n].y;
 
+        output_array[n] = 0;
+
         for(int i = 1; i <= iterations; i++){
             float temp_zx = zx*zx - (zy*zy) + cx;
             zy = 2*zx*zy + cy;
             zx = temp_zx;
             if (zx*zx + zy*zy > 4.0f){
-                output_array[n] = i;
+                output_array[n] = 255*i/iterations;
                 return;
             }
         }
     }
     ''').build()
-
-        # todo: PLACE COLOUR CALCULATION IN OPENCL SEGMENT
-        # OVERFLOW IS OCCURRING
-
 
     program.mandelbrot(command_queue,
                        complex_array.shape,
@@ -58,13 +56,12 @@ def get_iterations(context, complex_array, iterations):
 
 
 def calculate_mandelbrot(context, x_min, x_max, y_min, y_max, iterations, screen_width, screen_height):
-    real_array = np.linspace(x_min, x_max, screen_width, dtype=np.float32)
-    imaginary_array = np.linspace(y_min, y_max, screen_height, dtype=np.float32)
+    real_array = np.linspace(x_min, x_max, screen_width, dtype=np.float64)
+    imaginary_array = np.linspace(y_min, y_max, screen_height, dtype=np.float64)
     complex_array = real_array + imaginary_array[:, None]*1j
     complex_array = np.ravel(complex_array)
     colour_array = get_iterations(context, complex_array, iterations)
     colour_array = colour_array.reshape((screen_height, screen_width))
-    colour_array = ((colour_array / colour_array.max()) * 255).astype(np.ushort)
     return colour_array
 
 
@@ -79,14 +76,14 @@ def render_mandelbrot(colour_array):
     image = Image.fromarray(colour_array)
     image.save('mandelbrot. jpeg', 'JPEG')
 
-width = 1000
-height = 1000
-max_iterations = 50
-x_min = -2
-x_max = 2
-y_min = x_min * (height/width)
-y_max = x_max * (height/width)
+width = 1280
+height = 720
 
+max_iterations = 50
+x_max = 3
+x_min = -3
+y_max = x_max*(height/width)
+y_min = x_min*(height/width)
 
 main_surface = pygame.display.set_mode((width, height), HWSURFACE)
 mandelbrot = calculate_mandelbrot(cl_context, x_min, x_max, y_min, y_max, max_iterations, width, height)
@@ -96,6 +93,9 @@ main_surface.blit(rendered_set, (0, 0))
 mouse_pos_1 = None
 mouse_pos_2 = None
 highlight_rect = pygame.Rect((0, 0), (0, 0))
+
+real_array = np.linspace(x_min, x_max, width, dtype=np.float64)
+imaginary_array = np.linspace(y_min, y_max, height, dtype=np.float64)
 
 running = True
 clock = pygame.time.Clock()
@@ -127,34 +127,30 @@ while running:
             height_multiplier = -1
         highlight_rect.height = height_multiplier * abs(highlight_rect.width) * (height/width)
         pygame.draw.rect(main_surface, (255, 0, 0), highlight_rect, 2)
+        highlight_rect.normalize()
 
     if mouse_pos_1 and mouse_pos_2 is not None:
-
-        mouse_pos_2 = (mouse_pos[0], mouse_pos_1[1] + highlight_rect.height)
-
-        kx = abs(x_min-x_max)
-        x_inc = kx/width
-        x_min = (x_inc * mouse_pos_1[0]) - kx/2
-        x_max = (x_inc * mouse_pos_2[0]) - kx/2
-
-        ky = abs(y_min-y_max)
-        y_inc = kx/height
-        y_min = (y_inc * mouse_pos_1[1]) - ky/2
-        y_max = (y_inc * mouse_pos_2[1]) - ky/2
-
-        if x_min > x_max:
-            temp_min = x_min
-            x_min = x_max
-            x_max = temp_min
-        if y_max > y_min:
-            temp_min = y_min
-            y_min = y_max
-            y_max = temp_min
-
         mouse_pos_1 = None
         mouse_pos_2 = None
-        mandelbrot = calculate_mandelbrot(cl_context, x_min, x_max, y_min, y_max, max_iterations, width, height)
-        rendered_set = draw_mandelbrot(mandelbrot)
+
+        x_min = real_array[highlight_rect.left]
+        x_max = real_array[highlight_rect.right]
+        y_min = imaginary_array[height-highlight_rect.bottom]
+        y_max = imaginary_array[height-highlight_rect.top]
+
+        real_array = np.linspace(x_min, x_max, width, dtype=np.float64)
+        imaginary_array = np.linspace(y_min, y_max, height, dtype=np.float64)
+
+        print(x_min, x_max)
+
+        complex_array = real_array + imaginary_array[:, None]*1j
+        complex_array = np.ravel(complex_array)
+        colour_array = get_iterations(cl_context, complex_array, max_iterations)
+        colour_array = colour_array.reshape((height, width))
+
+
+        # mandelbrot = calculate_mandelbrot(cl_context, x_min, x_max, y_min, y_max, max_iterations, width, height)
+        rendered_set = draw_mandelbrot(colour_array)
 
     pygame.display.update()
 
