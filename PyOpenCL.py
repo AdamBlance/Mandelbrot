@@ -1,6 +1,6 @@
+from gradient import gradient
 import pyopencl as cl
 import numpy as np
-from PIL import Image
 import pygame
 from pygame.locals import *
 
@@ -9,35 +9,46 @@ environ['PYOPENCL_COMPILER_OUTPUT'] = '0'
 
 cl_context = cl.create_some_context(answers=[1, 0])
 
+pygame.display.init()
+
 
 def get_iterations(context, complex_array, iterations):
 
     command_queue = cl.CommandQueue(context)
 
-    output_array = np.empty(complex_array.shape, np.uint8)
+    output_array = np.empty(complex_array.shape, np.uint16)
 
     flags = cl.mem_flags
     complex_array_buffer = cl.Buffer(context, flags.READ_ONLY | flags.COPY_HOST_PTR, hostbuf=complex_array)
     output_array_buffer = cl.Buffer(context, flags.WRITE_ONLY, output_array.nbytes)
 
     program = cl.Program(context, '''
-    __kernel void mandelbrot(__global double2 *complex_array, __global uchar *output_array, ushort const iterations)
+    #pragma OPENCL EXTENSION cl_khr_fp64 : enable
+    __kernel void mandelbrot(__global double2 *complex_array, __global ushort *output_array, ushort const iterations)
     {
-        int n = get_global_id(0);
+        uint n = get_global_id(0);
 
-        float zx = 0;
-        float zy = 0;
-        float cx = complex_array[n].x;
-        float cy = complex_array[n].y;
+        double zx = 0;
+        double zy = 0;
+        double cx = complex_array[n].x;
+        double cy = complex_array[n].y;
 
         output_array[n] = 0;
 
-        for(int i = 1; i <= iterations; i++){
-            float temp_zx = zx*zx - (zy*zy) + cx;
+        double inv_log_2 = 1/log(2.0f);
+
+        for(uint i = 1; i <= iterations; i++){
+            double zx2 = zx*zx;
+            double zy2 = zy*zy;
+            double zx2_plus_zy2 = zx2 + zy2;
+
+            double temp_zx = zx2 - zy2 + cx;
             zy = 2*zx*zy + cy;
             zx = temp_zx;
-            if (zx*zx + zy*zy > 4.0f){
-                output_array[n] = 255*i/iterations;
+            if (zx2_plus_zy2 > 4.0f){
+                double grad = log(log(sqrt(zx2_plus_zy2)) * inv_log_2) * inv_log_2;
+                ushort colour = (int)(sqrt(i + 1 - grad) * 256) % 2048;
+                output_array[n] = colour;
                 return;
             }
         }
@@ -67,23 +78,23 @@ def calculate_mandelbrot(context, x_min, x_max, y_min, y_max, iterations, screen
 
 def draw_mandelbrot(colour_array):
     image_surface = pygame.Surface(colour_array.shape, HWSURFACE)
-    pygame.surfarray.blit_array(image_surface, np.array(colour_array).astype(int))
+    pixel_array = pygame.PixelArray(image_surface)
+    for y in range(width):
+        for x in range(height):
+            pixel_array[x][y] = gradient[colour_array[x][y]]
     image_surface = pygame.transform.rotate(image_surface, 90)
     return image_surface
-
-
-def render_mandelbrot(colour_array):
-    image = Image.fromarray(colour_array)
-    image.save('mandelbrot. jpeg', 'JPEG')
 
 width = 1280
 height = 720
 
-max_iterations = 50
-x_max = 3
-x_min = -3
+max_iterations = 2000
+x_max = 2.3
+x_min = -2.3
 y_max = x_max*(height/width)
 y_min = x_min*(height/width)
+
+pygame.display.set_caption('Mandelbrot Explorer')
 
 main_surface = pygame.display.set_mode((width, height), HWSURFACE)
 mandelbrot = calculate_mandelbrot(cl_context, x_min, x_max, y_min, y_max, max_iterations, width, height)
@@ -141,15 +152,11 @@ while running:
         real_array = np.linspace(x_min, x_max, width, dtype=np.float64)
         imaginary_array = np.linspace(y_min, y_max, height, dtype=np.float64)
 
-        print(x_min, x_max)
-
         complex_array = real_array + imaginary_array[:, None]*1j
         complex_array = np.ravel(complex_array)
         colour_array = get_iterations(cl_context, complex_array, max_iterations)
         colour_array = colour_array.reshape((height, width))
 
-
-        # mandelbrot = calculate_mandelbrot(cl_context, x_min, x_max, y_min, y_max, max_iterations, width, height)
         rendered_set = draw_mandelbrot(colour_array)
 
     pygame.display.update()
