@@ -12,20 +12,20 @@ pygame.display.init()
 pygame.font.init()
 
 
-def get_iterations(context, complex_array, iterations):
+def get_iterations(context, complex_values, iterations):
 
     command_queue = cl.CommandQueue(context)
 
-    output_array = np.empty(complex_array.shape, np.uint32)
+    output_array = np.empty(complex_values.shape, np.uint32)
 
     flags = cl.mem_flags
     gradient_array_buffer = cl.Buffer(context, flags.READ_ONLY | flags.COPY_HOST_PTR, hostbuf=gradient)
-    complex_array_buffer = cl.Buffer(context, flags.READ_ONLY | flags.COPY_HOST_PTR, hostbuf=complex_array)
+    complex_values_buffer = cl.Buffer(context, flags.READ_ONLY | flags.COPY_HOST_PTR, hostbuf=complex_values)
     output_array_buffer = cl.Buffer(context, flags.WRITE_ONLY, output_array.nbytes)
 
     program = cl.Program(context, '''
     #pragma OPENCL EXTENSION cl_khr_fp64 : enable
-    __kernel void mandelbrot(global double2 *complex_array,
+    __kernel void mandelbrot(global double2 *complex_values,
                              global uint *output_array,
                              global uint *gradient,
                              ushort const iterations)
@@ -34,8 +34,8 @@ def get_iterations(context, complex_array, iterations):
 
         double zx = 0;
         double zy = 0;
-        double cx = complex_array[id].x;
-        double cy = complex_array[id].y;
+        double cx = complex_values[id].x;
+        double cy = complex_values[id].y;
         double inv_log_2 = 1/log(2.0f);
 
         output_array[id] = 0;
@@ -59,9 +59,9 @@ def get_iterations(context, complex_array, iterations):
     ''').build()
 
     program.mandelbrot(command_queue,
-                       complex_array.shape,
+                       complex_values.shape,
                        None,  # Local memory size not specified
-                       complex_array_buffer,
+                       complex_values_buffer,
                        output_array_buffer,
                        gradient_array_buffer,
                        np.ushort(iterations))
@@ -70,19 +70,19 @@ def get_iterations(context, complex_array, iterations):
     return output_array
 
 
-def calculate_mandelbrot(context, x_min, x_max, y_min, y_max, iterations, screen_width, screen_height):
-    real_array = np.linspace(x_min, x_max, screen_width, dtype=np.float64)
-    imaginary_array = np.linspace(y_min, y_max, screen_height, dtype=np.float64)
-    complex_array = real_array + imaginary_array[:, None]*1j
-    complex_array = np.ravel(complex_array)
-    colour_array = get_iterations(context, complex_array, iterations)
-    colour_array = colour_array.reshape((screen_height, screen_width))
-    return colour_array
+def calculate_mandelbrot(context, x_minimum, x_maximum, y_minimum, y_maximum, iterations, screen_width, screen_height):
+    real_values = np.linspace(x_minimum, x_maximum, screen_width, dtype=np.float64)
+    imaginary_values = np.linspace(y_minimum, y_maximum, screen_height, dtype=np.float64)
+    complex_values = real_values + imaginary_values[:, None]*1j
+    complex_values = np.ravel(complex_values)
+    colour_values = get_iterations(context, complex_values, iterations)
+    colour_values = colour_values.reshape((screen_height, screen_width))
+    return colour_values
 
 
-def draw_mandelbrot(colour_array):
-    image_surface = pygame.Surface(colour_array.shape, HWSURFACE)
-    pygame.surfarray.blit_array(image_surface, colour_array)
+def draw_mandelbrot(value_array):
+    image_surface = pygame.Surface(value_array.shape, HWSURFACE)
+    pygame.surfarray.blit_array(image_surface, value_array)
     image_surface = pygame.transform.rotate(image_surface, 90)
     return image_surface
 
