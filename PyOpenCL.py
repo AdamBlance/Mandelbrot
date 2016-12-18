@@ -60,7 +60,7 @@ def draw_mandelbrot(value_array):
 width = 1000
 height = 1000
 
-max_iterations = 2500
+max_iterations = 10000
 x_max = 2.3
 x_min = -2.3
 y_max = x_max*(height/width)

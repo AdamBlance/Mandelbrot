@@ -1,5 +1,5 @@
 import numpy as np
-gradient = np.array([0,
+gradient = np.array([1982,
                     1892,
                     1892,
                     1892,
