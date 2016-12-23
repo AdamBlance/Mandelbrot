@@ -1,32 +1,52 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 __kernel void mandelbrot(global double2 *complex_values,
-                         global uint *output_array,
-                         global uint *gradient,
-                         ushort const iterations) {
+                         global ushort4 *output_array,
+                         global float4 const *gradient
+                         //uint const iterations
+                         ) {
 
 	uint id = get_global_id(0);
 
-	double zx = 0;
-	double zy = 0;
+    uint iterations = 5000;
+
+	double zx = 0.0f;
+    double zx_temp;
+	double zy = 0.0f;
+
 	double cx = complex_values[id].x;
 	double cy = complex_values[id].y;
-	double inv_log_2 = 1/log(2.0f);
 
 	output_array[id] = 0;
 
-	for(uint i = 0; i <= iterations; i++) {
-		double zx2 = zx*zx;
-		double zy2 = zy*zy;
-		double zx2_plus_zy2 = zx2 + zy2;
+	uint bailout_radius = 1 << 16;
+	double current_iter = 0.0f;
 
-		double temp_zx = zx2 - zy2 + cx;
-		zy = 2*zx*zy + cy;
-		zx = temp_zx;
-		if (zx2_plus_zy2 > 4){
-			double grad = log(log(sqrt(zx2_plus_zy2)) * inv_log_2) * inv_log_2;
-			ushort colour = (uint)(sqrt(i + 1 - grad) * 256) % 2048;
-			output_array[id] = gradient[colour];
-			return;
-		}
-	}
+    double nu;
+    double log_zn;
+
+    float4 colour_1;
+    float4 colour_2;
+    ushort4 colour;
+
+	while ((zx*zx + zy*zy < (bailout_radius)) && (current_iter < iterations)) {
+
+        zx_temp = zx*zx - zy*zy + cx;
+        zy = 2.0f*zx*zy + cy;
+        zx = zx_temp;
+
+        current_iter = current_iter + 1.0f;
+    }
+
+    if (current_iter < iterations) {
+        log_zn = log(zx*zx + zy*zy) / 2.0f;
+        nu = log(log_zn / log(2.0f)) / log(2.0f);
+        current_iter = current_iter + 1.0f - nu;
+    }
+
+    colour_1 = gradient[(int)current_iter];
+    colour_2 = gradient[(int)(current_iter) + (int)1];
+    colour = convert_ushort4(mix(colour_1, colour_2, fmod((float)current_iter, 1.0f)));
+
+    output_array[id] = colour;
+    return;
 }
