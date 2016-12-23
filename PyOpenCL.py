@@ -59,16 +59,20 @@ def test(rgba):
 
 
 def draw_mandelbrot(value_array):
-    value_list = value_array.copy().tolist()
 
-    for i in range(len(value_list)):
-        for x in range(len(value_list[i])):
-            value_list[i][x] = test(value_list[i][x])
     image_surface = pygame.Surface(value_array.shape, SRCALPHA)
 
-    value_list = np.array(value_list)
+    for i in range(len(value_array)):
+        for x in range(len(value_array[i])):
+            my_colour = pygame.Color(0, 0, 0, 0)
 
-    pygame.surfarray.blit_array(image_surface, value_list)
+            my_colour.r = int(value_array[i][x][0])
+            my_colour.g = int(value_array[i][x][1])
+            my_colour.b = int(value_array[i][x][2])
+            my_colour.a = int(value_array[i][x][3])
+
+            image_surface.set_at((i, x), my_colour)
+
     wow = pygame.transform.rotate(image_surface, 90)
     return wow
 
@@ -137,10 +141,10 @@ while running:
 
     text_rect_1.width = coordinate_surface_x.get_rect().width
     text_rect_2.width = coordinate_surface_y.get_rect().width
-    # pygame.draw.rect(main_surface, (0, 0, 0), text_rect_1)
-    # pygame.draw.rect(main_surface, (0, 0, 0), text_rect_2)
-    # main_surface.blit(coordinate_surface_x, (20, height - 50))
-    # main_surface.blit(coordinate_surface_y, (20, height - 30))
+    pygame.draw.rect(main_surface, (0, 0, 0), text_rect_1)
+    pygame.draw.rect(main_surface, (0, 0, 0), text_rect_2)
+    main_surface.blit(coordinate_surface_x, (20, height - 50))
+    main_surface.blit(coordinate_surface_y, (20, height - 30))
 
     if mouse_pos_1 is not None:
         highlight_rect.x = mouse_pos_1[0]
