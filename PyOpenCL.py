@@ -17,7 +17,6 @@ def get_iterations(context, complex_values, iterations):
     command_queue = cl.CommandQueue(context)
     output_array = np.zeros(complex_values.shape, dtype=clar.vec.ushort4)
 
-
     flags = cl.mem_flags
     complex_values_buffer = cl.Buffer(context, flags.READ_ONLY | flags.COPY_HOST_PTR, hostbuf=complex_values)
     gradient_array_buffer = cl.Buffer(context, flags.READ_ONLY | flags.COPY_HOST_PTR, hostbuf=gradient)
@@ -51,27 +50,16 @@ def calculate_mandelbrot(context, x_minimum, x_maximum, y_minimum, y_maximum, it
     return colour_values
 
 
-def test(rgba):
-    array = []
-    for item in rgba:
-        array.append(bin(item).replace('0b', ''))
-    return int(''.join(array), 2)
-
-
 def draw_mandelbrot(value_array):
 
     image_surface = pygame.Surface(value_array.shape, SRCALPHA)
 
     for i in range(len(value_array)):
         for x in range(len(value_array[i])):
-            my_colour = pygame.Color(0, 0, 0, 0)
-
-            my_colour.r = int(value_array[i][x][0])
-            my_colour.g = int(value_array[i][x][1])
-            my_colour.b = int(value_array[i][x][2])
-            my_colour.a = int(value_array[i][x][3])
-
-            image_surface.set_at((i, x), my_colour)
+            image_surface.set_at((i, x), pygame.Color(int(value_array[i][x][0]),
+                                                      int(value_array[i][x][1]),
+                                                      int(value_array[i][x][2]),
+                                                      int(value_array[i][x][3])))
 
     wow = pygame.transform.rotate(image_surface, 90)
     return wow

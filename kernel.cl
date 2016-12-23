@@ -44,7 +44,7 @@ __kernel void mandelbrot(global double2 *complex_values,
     }
 
     colour_1 = gradient[(int)current_iter % (int)16];
-    colour_2 = gradient[((int)(current_iter) % (int)16) + (int)1];
+    colour_2 = gradient[((int)(current_iter) + (int)1) % (int)16];
     colour = convert_ushort4(mix(colour_1, colour_2, fmod((float)current_iter, 1.0f)));
 
     output_array[id] = colour;
