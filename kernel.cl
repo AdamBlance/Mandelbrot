@@ -7,7 +7,7 @@ __kernel void mandelbrot(global double2 *complex_values,
 
 	uint id = get_global_id(0);
 
-    uint iterations = 2000;
+    uint iterations = 200;
 
 	double zx = 0.0f;
     double zx_temp;
@@ -41,6 +41,10 @@ __kernel void mandelbrot(global double2 *complex_values,
         log_zn = log(zx*zx + zy*zy) / 2.0f;
         nu = log(log_zn / log(2.0f)) / log(2.0f);
         current_iter = current_iter + 1.0f - nu;
+    }
+    else {
+        output_array[id] = (ushort4)(0, 0, 0, 255);
+        return;
     }
 
     colour_1 = gradient[(int)current_iter % (int)16];
